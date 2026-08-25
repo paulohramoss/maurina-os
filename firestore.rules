@@ -54,10 +54,28 @@ service cloud.firestore {
     /* ---------------- índice de usuários ---------------- */
 
     match /usuariosIndex/{uid} {
-      // O usuário lê só o próprio índice. Escrita é exclusiva do Admin SDK
-      // (Cloud Function de criação de usuário) — ninguém promove a si mesmo a admin.
+      // O usuário lê só o próprio índice — nunca a lista, nunca o dos outros.
       allow read: if autenticado() && request.auth.uid == uid;
-      allow write: if false;
+
+      // O admin cadastra a equipe pelo app. Três travas:
+      //   1. só cria índice apontando para a PRÓPRIA oficina;
+      //   2. nunca mexe no próprio documento (ninguém se promove, nem se rebaixa
+      //      sozinho deixando a oficina sem administrador);
+      //   3. papel tem que ser um dos três conhecidos.
+      function adminDaOficinaDoAlvo() {
+        return autenticado()
+          && exists(/databases/$(database)/documents/usuariosIndex/$(request.auth.uid))
+          && indice().papel == 'admin'
+          && indice().ativo == true
+          && request.resource.data.oficinaId == indice().oficinaId
+          && uid != request.auth.uid
+          && request.resource.data.papel in ['admin', 'atendente', 'mecanico'];
+      }
+
+      allow create: if adminDaOficinaDoAlvo();
+      allow update: if adminDaOficinaDoAlvo()
+                    && resource.data.oficinaId == indice().oficinaId;
+      allow delete: if false;
     }
 
     /* ---------------- tokens públicos de aprovação (Fase 4) ---------------- */
@@ -81,8 +99,8 @@ service cloud.firestore {
       /* --- usuários da oficina --- */
       match /usuarios/{uid} {
         allow read: if daOficina(oficinaId);
-        // Criação de usuário passa pela Cloud Function (Admin SDK).
-        allow create, delete: if false;
+        allow create: if ehAdmin(oficinaId);
+        allow delete: if false;
         // O próprio usuário só ajusta o nome; papel e ativo são do admin.
         allow update: if ehAdmin(oficinaId)
                       || (request.auth.uid == uid && somenteEstesCampos(['nome', 'atualizadoEm']));

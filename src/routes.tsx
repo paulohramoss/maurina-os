@@ -11,6 +11,10 @@ import { TelaFichaCliente } from '@/features/clientes/TelaFichaCliente'
 import { TelaEquipe } from '@/features/equipe/TelaEquipe'
 import { TelaImprimirOS } from '@/features/ordens/TelaImprimirOS'
 import { TelaFichaVeiculo } from '@/features/veiculos/TelaFichaVeiculo'
+import { TelaCatalogo } from '@/features/catalogo/TelaCatalogo'
+import { TelaFinanceiro } from '@/features/financeiro/TelaFinanceiro'
+import { TelaRevisoes } from '@/features/veiculos/TelaRevisoes'
+import { TelaConfig } from '@/features/config/TelaConfig'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <TelaLogin /> },
@@ -64,6 +68,38 @@ export const router = createBrowserRouter([
         element: (
           <RotaProtegida exige="cliente:criar">
             <TelaEquipe />
+          </RotaProtegida>
+        ),
+      },
+      {
+        path: 'catalogo',
+        element: (
+          <RotaProtegida exige="catalogo:editar">
+            <TelaCatalogo />
+          </RotaProtegida>
+        ),
+      },
+      {
+        path: 'financeiro',
+        element: (
+          <RotaProtegida exige="financeiro:ver">
+            <TelaFinanceiro />
+          </RotaProtegida>
+        ),
+      },
+      {
+        path: 'revisoes',
+        element: (
+          <RotaProtegida exige="cliente:criar">
+            <TelaRevisoes />
+          </RotaProtegida>
+        ),
+      },
+      {
+        path: 'config',
+        element: (
+          <RotaProtegida exige="config:editar">
+            <TelaConfig />
           </RotaProtegida>
         ),
       },

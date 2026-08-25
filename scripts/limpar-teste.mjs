@@ -28,7 +28,7 @@ const db = getFirestore(ID_BANCO)
 const base = `oficinas/${OFICINA_ID}`
 let removidos = 0
 
-/** Apaga a OS de teste junto com a subcoleção de histórico. */
+/** Apaga a OS de teste junto com histórico e pagamentos vinculados. */
 const ordens = await db.collection(`${base}/ordens`).where('snapshotVeiculo.placa', '==', 'TST1D23').get()
 for (const os of ordens.docs) {
   const historico = await os.ref.collection('historico').get()
@@ -36,9 +36,16 @@ for (const os of ordens.docs) {
     await evento.ref.delete()
     removidos++
   }
+
+  const pagamentos = await db.collection(`${base}/pagamentos`).where('osId', '==', os.id).get()
+  for (const pagamento of pagamentos.docs) {
+    await pagamento.ref.delete()
+    removidos++
+  }
+
   await os.ref.delete()
   removidos++
-  console.log(`OS ${os.data().numero} removida.`)
+  console.log(`OS ${os.data().numero} removida (com histórico e pagamentos).`)
 }
 
 const veiculos = await db.collection(`${base}/veiculos`).where('placa', '==', 'TST1D23').get()
@@ -50,6 +57,8 @@ for (const v of veiculos.docs) {
 for (const [colecao, campo, valor] of [
   ['clientes', 'nome', 'ZZ Cliente de Teste'],
   ['mecanicos', 'nome', 'ZZ Mecânico de Teste'],
+  ['catalogoPecas', 'descricao', 'ZZ Pastilha de Teste'],
+  ['catalogoServicos', 'descricao', 'ZZ Troca de Teste'],
 ]) {
   const snap = await db.collection(`${base}/${colecao}`).where(campo, '==', valor).get()
   for (const d of snap.docs) {

@@ -51,6 +51,18 @@ export function AppShell() {
     { para: '/clientes', rotulo: 'Clientes', Icone: IconeClientes, oculto: !podeAbrirOS },
   ]
 
+  /**
+   * Links de operação diária. Não vão na barra inferior — ela tem cinco alvos
+   * grandes e é usada com a mão suja; o que se abre uma vez por dia fica no menu.
+   */
+  const secundarios = [
+    { para: '/financeiro', rotulo: 'Financeiro', oculto: !pode(papel, 'financeiro:ver') },
+    { para: '/catalogo', rotulo: 'Catálogo de preços', oculto: !pode(papel, 'catalogo:editar') },
+    { para: '/revisoes', rotulo: 'Revisões vencidas', oculto: !podeAbrirOS },
+    { para: '/equipe', rotulo: 'Equipe do pátio', oculto: !podeAbrirOS },
+    { para: '/config', rotulo: 'Configurações', oculto: !pode(papel, 'config:editar') },
+  ].filter((i) => !i.oculto)
+
   const aoSair = async () => {
     await sair()
     navegar('/login', { replace: true })
@@ -102,16 +114,22 @@ export function AppShell() {
           )}
         </nav>
 
-        <div className="flex flex-col gap-2 border-t border-grafite-800 p-3">
-          {podeAbrirOS && (
+        <div className="flex flex-col gap-1 border-t border-grafite-800 p-3">
+          {secundarios.map((item) => (
             <NavLink
-              to="/equipe"
-              className="flex min-h-toque items-center gap-3 rounded-lg px-3 text-sm text-grafite-300 hover:bg-grafite-800"
+              key={item.para}
+              to={item.para}
+              className={({ isActive }) =>
+                [
+                  'flex min-h-toque items-center rounded-lg px-3 text-sm transition-colors',
+                  isActive ? 'bg-grafite-800 text-acento-400' : 'text-grafite-300 hover:bg-grafite-800',
+                ].join(' ')
+              }
             >
-              <IconeClientes className="h-5 w-5" />
-              Equipe do pátio
+              {item.rotulo}
             </NavLink>
-          )}
+          ))}
+          <div className="mt-2 border-t border-grafite-800 pt-2" />
           <PainelUsuario
             nome={mecanicoAtivoNome ?? usuario?.nome}
             papel={papel}
@@ -151,17 +169,23 @@ export function AppShell() {
         </header>
 
         {menuAberto && (
-          <div className="flex flex-col gap-2 border-b border-grafite-800 bg-grafite-900 p-3 md:hidden">
-            {podeAbrirOS && (
+          <div className="flex flex-col gap-1 border-b border-grafite-800 bg-grafite-900 p-3 md:hidden">
+            {secundarios.map((item) => (
               <NavLink
-                to="/equipe"
+                key={item.para}
+                to={item.para}
                 onClick={() => setMenuAberto(false)}
-                className="flex min-h-toque items-center gap-3 rounded-lg px-3 text-sm text-grafite-300 hover:bg-grafite-800"
+                className={({ isActive }) =>
+                  [
+                    'flex min-h-toque items-center rounded-lg px-3 text-sm transition-colors',
+                    isActive ? 'bg-grafite-800 text-acento-400' : 'text-grafite-300 hover:bg-grafite-800',
+                  ].join(' ')
+                }
               >
-                <IconeClientes className="h-5 w-5" />
-                Equipe do pátio
+                {item.rotulo}
               </NavLink>
-            )}
+            ))}
+            <div className="mt-2 border-t border-grafite-800 pt-2" />
             <PainelUsuario
               nome={mecanicoAtivoNome ?? usuario?.nome}
               papel={papel}
