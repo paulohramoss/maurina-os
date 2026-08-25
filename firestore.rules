@@ -131,7 +131,7 @@ service cloud.firestore {
         // Campos que o mecânico pode encostar. Nenhum deles é dinheiro.
         function camposDoMecanico() {
           return ['diagnostico', 'mecanicoResponsavelId', 'status',
-                  'checklistEntrada', 'atualizadoEm',
+                  'checklistEntrada', 'fotosExecucao', 'atualizadoEm',
                   'pecas', 'servicos'];
         }
 

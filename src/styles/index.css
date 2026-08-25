@@ -74,13 +74,31 @@
 
 @media print {
   /* A OS impressa é preta no branco: tinta de oficina é cara. */
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+
+  html,
   body {
     background: #fff !important;
     color: #000 !important;
-    font-size: 11pt;
+    height: auto;
   }
 
   .nao-imprimir {
     display: none !important;
+  }
+
+  /* Uma via não pode ser partida no meio por uma quebra de página. */
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Garante que fundos e bordas saiam na impressora, não só na tela. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

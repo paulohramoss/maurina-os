@@ -275,6 +275,9 @@ export interface OrdemServico extends Auditoria {
   diagnostico?: string
   mecanicoResponsavelId?: string
 
+  /** Fotos tiradas durante o serviço — o "antes e depois" que se mostra ao cliente. */
+  fotosExecucao?: string[]
+
   pecas: ItemPeca[]
   servicos: ItemServico[]
 

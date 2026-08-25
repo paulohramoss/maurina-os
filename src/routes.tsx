@@ -9,9 +9,20 @@ import { TelaDetalheOS } from '@/features/ordens/TelaDetalheOS'
 import { TelaClientes } from '@/features/clientes/TelaClientes'
 import { TelaFichaCliente } from '@/features/clientes/TelaFichaCliente'
 import { TelaEquipe } from '@/features/equipe/TelaEquipe'
+import { TelaImprimirOS } from '@/features/ordens/TelaImprimirOS'
+import { TelaFichaVeiculo } from '@/features/veiculos/TelaFichaVeiculo'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <TelaLogin /> },
+  {
+    // Fora do AppShell de propósito: a via impressa não leva menu nem barra.
+    path: '/os/:id/imprimir',
+    element: (
+      <RotaProtegida exige="os:imprimir">
+        <TelaImprimirOS />
+      </RotaProtegida>
+    ),
+  },
   {
     path: '/',
     element: (
@@ -31,6 +42,7 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'os/:id', element: <TelaDetalheOS /> },
+      { path: 'veiculos/:id', element: <TelaFichaVeiculo /> },
       {
         path: 'clientes',
         element: (
