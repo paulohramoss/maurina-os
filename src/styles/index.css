@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html.claro {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-grafite-950 text-grafite-100 font-sans antialiased;
+    /* Fonte nunca abaixo de 14px: é o piso do app, não uma sugestão. */
+    font-size: 16px;
+    /* Respeita notch e barra de gestos no celular. */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  html.claro body {
+    @apply bg-grafite-50 text-grafite-900;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-titulo tracking-wide;
+  }
+
+  /* Foco sempre visível — o app é usado com luva e sob luz forte. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-acento-500 ring-offset-2 ring-offset-grafite-950;
+  }
+
+  html.claro :focus-visible {
+    @apply ring-offset-grafite-50;
+  }
+
+  /* Tira as setinhas de input number: quilometragem se digita, não se clica. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  /* Superfície padrão de card/painel, clara ou escura. */
+  .superficie {
+    @apply bg-grafite-900 border border-grafite-800;
+  }
+
+  html.claro .superficie {
+    @apply bg-white border-grafite-200;
+  }
+
+  .texto-fraco {
+    @apply text-grafite-400;
+  }
+
+  html.claro .texto-fraco {
+    @apply text-grafite-500;
+  }
+}
+
+@media print {
+  /* A OS impressa é preta no branco: tinta de oficina é cara. */
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+  }
+
+  .nao-imprimir {
+    display: none !important;
+  }
+}

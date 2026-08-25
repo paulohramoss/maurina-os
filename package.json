@@ -12,12 +12,13 @@
     "test:watch": "vitest",
     "emu": "firebase emulators:start",
     "deploy": "npm run build && firebase deploy",
-    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage"
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",
+    "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "date-fns": "^4.1.0",
-    "firebase": "^11.1.0",
+    "firebase": "^12.18.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
@@ -26,6 +27,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/node": "^26.3.0",
@@ -33,6 +35,8 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "firebase-admin": "^14.3.0",
+    "firebase-tools": "^15.28.1",
     "jsdom": "^25.0.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",

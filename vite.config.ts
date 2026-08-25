@@ -34,6 +34,24 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  build: {
+    // O SDK do Firebase sozinho passa de 500 kB e não há como fatiar mais:
+    // ele já está isolado no próprio chunk e é cacheado entre deploys.
+    // O código do app fica em ~100 kB, que é o número que importa vigiar.
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        // A internet da oficina é ruim: separar os pacotes grandes faz o
+        // navegador reaproveitar o cache do Firebase entre um deploy e outro,
+        // em vez de rebaixar tudo a cada correção de tela.
+        manualChunks: {
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          react: ['react', 'react-dom', 'react-router-dom'],
+          formulario: ['react-hook-form', '@hookform/resolvers/zod', 'zod'],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
