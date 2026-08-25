@@ -5,8 +5,7 @@ import { BuscaPlaca } from '@/components/os/BuscaPlaca'
 import { CartaoOS } from '@/components/os/CartaoOS'
 import { EsqueletoLinha, Vazio } from '@/components/ui/Carregando'
 import { Botao } from '@/components/ui/Botao'
-import { EtiquetaStatus } from '@/components/os/EtiquetaStatus'
-import { ORDEM_STATUS, STATUS_NO_PATIO } from '@/domain/statusOS'
+import { corStatus, ORDEM_STATUS, STATUS_NO_PATIO } from '@/domain/statusOS'
 import { useAuthStore } from '@/store/authStore'
 import { pode, vePrecos } from '@/domain/permissoes'
 import { formatarMoeda } from '@/utils/dinheiro'
@@ -184,14 +183,27 @@ function Indicador({
   )
 }
 
+/**
+ * Contador por status.
+ *
+ * Aqui a cor vira barra lateral em vez de pílula: numa coluna de ~110px,
+ * "Aguardando aprovação" não cabe dentro de uma pílula sem vazar do card.
+ * A barra dá a mesma leitura de cor e libera a largura inteira para o texto,
+ * que pode quebrar em duas linhas à vontade.
+ */
 function ChipStatus({ status, total }: { status: StatusOS; total: number }) {
+  const cor = corStatus(status)
+
   return (
     <Link
       to={`/os?status=${status}`}
-      className="superficie flex min-h-toque flex-col justify-between gap-1 rounded-xl p-3 transition-colors hover:bg-grafite-800"
+      className="superficie flex min-h-toque items-center gap-2.5 rounded-xl border-l-4 p-3 transition-colors hover:bg-grafite-800"
+      style={{ borderLeftColor: cor.borda }}
     >
-      <span className="font-mono text-2xl font-bold text-grafite-50">{total}</span>
-      <EtiquetaStatus status={status} tamanho="sm" />
+      <span className="shrink-0 font-mono text-2xl font-bold leading-none text-grafite-50">
+        {total}
+      </span>
+      <span className="min-w-0 text-xs leading-tight text-grafite-300">{cor.rotulo}</span>
     </Link>
   )
 }
