@@ -101,6 +101,53 @@ registrado no histórico da OS.
 
 ---
 
+## Deploy
+
+O app roda em dois lugares, a partir do mesmo código:
+
+| Ambiente | URL | Como publica |
+|---|---|---|
+| Firebase Hosting | https://maurina-73a7d.web.app | `npm run deploy` |
+| Vercel | https://maurina-os.vercel.app | automático a cada push na `main` |
+
+### Vercel
+
+O `vercel.json` já traz o fallback de SPA e o cache dos assets. O que precisa
+ser configurado uma vez, em **Settings → Environment Variables**:
+
+```
+VITE_FIREBASE_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN
+VITE_FIREBASE_PROJECT_ID
+VITE_FIREBASE_STORAGE_BUCKET
+VITE_FIREBASE_MESSAGING_SENDER_ID
+VITE_FIREBASE_APP_ID
+VITE_FIREBASE_DATABASE_ID
+VITE_USAR_EMULADOR=false
+```
+
+Os valores são os mesmos do `.env.local` (que nunca vai para o repositório).
+
+> **Domínio autorizado:** o Firebase Auth só aceita login vindo de domínios
+> declarados. `maurina-os.vercel.app` já está autorizado. **URLs de preview**
+> do Vercel (`maurina-os-abc123.vercel.app`) mudam a cada deploy e **não**
+> conseguem fazer login — para testar um preview, adicione aquela URL em
+> Firebase Console → Authentication → Settings → Domínios autorizados.
+
+### As Security Rules são a única defesa
+
+Este repositório é público e a chave da API do Firebase fica embutida no bundle
+— é assim que o Firebase web funciona, e é por isso que ela não é um segredo.
+Quem protege os dados são as regras em `firestore.rules`, e é por isso que
+elas têm **43 testes no emulador e 68 contra o projeto real**.
+
+Consequência prática: qualquer pessoa com a chave consegue *criar uma conta* no
+projeto — mas ela não enxerga nada, porque toda leitura exige um documento em
+`/usuariosIndex` que só um admin escreve. Se o volume de contas fantasma virar
+incômodo, o caminho é ativar o **App Check**.
+
+---
+
 ## Como o código está organizado
 
 ```
