@@ -1,0 +1,212 @@
+rules_version = '2';
+
+// Regras de segurança da Maurina AutoCar.
+//
+// Dois princípios, e nenhuma exceção:
+//   1. Ninguém enxerga nada fora da SUA oficina.
+//   2. Mecânico não toca em dinheiro — nem lendo campo de valor por escrita,
+//      nem alterando peça, serviço, desconto ou pagamento.
+//
+// Espelha src/domain/permissoes.ts. Mudou lá, muda aqui.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------------- helpers ---------------- */
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    // Índice raiz: resolve oficina e papel sem cadeia de leituras.
+    function indice() {
+      return get(/databases/$(database)/documents/usuariosIndex/$(request.auth.uid)).data;
+    }
+
+    function daOficina(oficinaId) {
+      return autenticado()
+        && exists(/databases/$(database)/documents/usuariosIndex/$(request.auth.uid))
+        && indice().oficinaId == oficinaId
+        && indice().ativo == true;
+    }
+
+    function papel(oficinaId) {
+      return daOficina(oficinaId) ? indice().papel : 'nenhum';
+    }
+
+    function ehAdmin(oficinaId)     { return papel(oficinaId) == 'admin'; }
+    function ehAtendente(oficinaId) { return papel(oficinaId) == 'atendente'; }
+    function ehMecanico(oficinaId)  { return papel(oficinaId) == 'mecanico'; }
+
+    // Quem opera o balcão: abre OS, mexe em valor, cobra.
+    function ehBalcao(oficinaId) {
+      return ehAdmin(oficinaId) || ehAtendente(oficinaId);
+    }
+
+    function campoMudou(campo) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([campo]);
+    }
+
+    function somenteEstesCampos(campos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
+    }
+
+    // Soft delete: nada some do banco.
+    function naoApaga() {
+      return request.method != 'delete';
+    }
+
+    /* ---------------- índice de usuários ---------------- */
+
+    match /usuariosIndex/{uid} {
+      // O usuário lê só o próprio índice. Escrita é exclusiva do Admin SDK
+      // (Cloud Function de criação de usuário) — ninguém promove a si mesmo a admin.
+      allow read: if autenticado() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    /* ---------------- tokens públicos de aprovação (Fase 4) ---------------- */
+
+    match /aprovacoes/{token} {
+      // Cliente abre pelo link do WhatsApp, sem login. Só lê enquanto o token vale.
+      allow get: if resource.data.expiraEm > request.time
+                 && resource.data.usado == false;
+      allow list: if false;
+      // A aprovação em si é gravada por Cloud Function, que registra IP e timestamp.
+      allow write: if false;
+    }
+
+    /* ---------------- oficina ---------------- */
+
+    match /oficinas/{oficinaId} {
+
+      allow read: if daOficina(oficinaId);
+      allow write: if ehAdmin(oficinaId);
+
+      /* --- usuários da oficina --- */
+      match /usuarios/{uid} {
+        allow read: if daOficina(oficinaId);
+        // Criação de usuário passa pela Cloud Function (Admin SDK).
+        allow create, delete: if false;
+        // O próprio usuário só ajusta o nome; papel e ativo são do admin.
+        allow update: if ehAdmin(oficinaId)
+                      || (request.auth.uid == uid && somenteEstesCampos(['nome', 'atualizadoEm']));
+      }
+
+      /* --- mecânicos do pátio (não são contas de login) --- */
+      match /mecanicos/{mecanicoId} {
+        allow read: if daOficina(oficinaId);
+        allow create, update: if ehBalcao(oficinaId);
+        allow delete: if false;
+      }
+
+      /* --- configuração e contador da OS --- */
+      match /config/{doc} {
+        allow read: if daOficina(oficinaId);
+        // O contador de OS é escrito na transação de abertura — o balcão precisa.
+        // O resto da configuração é só do admin.
+        allow update: if ehAdmin(oficinaId)
+                      || (ehAtendente(oficinaId)
+                          && doc == 'geral'
+                          && somenteEstesCampos(['contadorOS', 'anoContador']));
+        allow create: if ehAdmin(oficinaId);
+        allow delete: if false;
+      }
+
+      /* --- clientes --- */
+      match /clientes/{clienteId} {
+        allow read: if daOficina(oficinaId);
+        allow create, update: if ehBalcao(oficinaId);
+        allow delete: if false;  // soft delete via campo excluidoEm
+      }
+
+      /* --- veículos --- */
+      match /veiculos/{veiculoId} {
+        allow read: if daOficina(oficinaId);
+        allow create, update: if ehBalcao(oficinaId);
+        // Mecânico só atualiza a quilometragem que leu no painel.
+        allow update: if ehMecanico(oficinaId)
+                      && somenteEstesCampos(['kmAtual', 'atualizadoEm']);
+        allow delete: if false;
+      }
+
+      /* --- ordens de serviço --- */
+      match /ordens/{osId} {
+
+        // Campos que o mecânico pode encostar. Nenhum deles é dinheiro.
+        function camposDoMecanico() {
+          return ['diagnostico', 'mecanicoResponsavelId', 'status',
+                  'checklistEntrada', 'atualizadoEm',
+                  'pecas', 'servicos'];
+        }
+
+        // Peça/serviço: o mecânico marca "aplicada"/"concluido", mas a lista
+        // tem que continuar com o mesmo tamanho e os mesmos valores.
+        function valoresIntactos() {
+          return request.resource.data.subtotalPecas == resource.data.subtotalPecas
+              && request.resource.data.subtotalServicos == resource.data.subtotalServicos
+              && request.resource.data.valorTotal == resource.data.valorTotal
+              && request.resource.data.desconto == resource.data.desconto
+              && request.resource.data.pecas.size() == resource.data.pecas.size()
+              && request.resource.data.servicos.size() == resource.data.servicos.size()
+              && !campoMudou('pagamento')
+              && !campoMudou('aprovacao')
+              && !campoMudou('numero');
+        }
+
+        // Nem o balcão reescreve identidade e autoria da OS.
+        function imutaveisPreservados() {
+          return request.resource.data.numero == resource.data.numero
+              && request.resource.data.criadoEm == resource.data.criadoEm
+              && request.resource.data.criadoPor == resource.data.criadoPor;
+        }
+
+        allow read: if daOficina(oficinaId);
+
+        allow create: if ehBalcao(oficinaId)
+                      && request.resource.data.criadoPor == request.auth.uid;
+
+        allow update: if (ehBalcao(oficinaId) && imutaveisPreservados())
+                      || (ehMecanico(oficinaId)
+                          && somenteEstesCampos(camposDoMecanico())
+                          && valoresIntactos()
+                          && imutaveisPreservados());
+
+        allow delete: if false;  // OS nunca é apagada; é cancelada
+
+        /* --- timeline: só cresce, nunca é reescrita --- */
+        match /historico/{eventoId} {
+          allow read: if daOficina(oficinaId);
+          allow create: if daOficina(oficinaId)
+                        && request.resource.data.autorId == request.auth.uid;
+          allow update, delete: if false;
+        }
+      }
+
+      /* --- catálogo de peças e serviços --- */
+      match /catalogoPecas/{id} {
+        allow read: if daOficina(oficinaId);
+        allow create, update: if ehBalcao(oficinaId);
+        allow delete: if false;
+      }
+
+      match /catalogoServicos/{id} {
+        allow read: if daOficina(oficinaId);
+        allow create, update: if ehBalcao(oficinaId);
+        allow delete: if false;
+      }
+
+      /* --- financeiro: mecânico não entra --- */
+      match /pagamentos/{id} {
+        allow read: if ehBalcao(oficinaId);
+        allow create, update: if ehBalcao(oficinaId);
+        allow delete: if false;
+      }
+    }
+
+    // Qualquer caminho não previsto acima: negado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

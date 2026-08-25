@@ -1,0 +1,91 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "ordens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "dataEntrada", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ordens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "dataEntrada", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ordens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "veiculoId", "order": "ASCENDING" },
+        { "fieldPath": "dataEntrada", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ordens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "clienteId", "order": "ASCENDING" },
+        { "fieldPath": "dataEntrada", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ordens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "mecanicoResponsavelId", "order": "ASCENDING" },
+        { "fieldPath": "dataEntrada", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ordens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "snapshotVeiculo.placa", "order": "ASCENDING" },
+        { "fieldPath": "dataEntrada", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "veiculos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "clienteId", "order": "ASCENDING" },
+        { "fieldPath": "placa", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "veiculos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "proximaRevisaoData", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "clientes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "nomeBusca", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pagamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "excluidoEm", "order": "ASCENDING" },
+        { "fieldPath": "recebidoEm", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

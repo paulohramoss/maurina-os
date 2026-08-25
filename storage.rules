@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Fotos do checklist e da execução.
+// Mesma regra do Firestore: só a própria oficina, e nada de arquivo gigante.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function daOficina(oficinaId) {
+      return autenticado()
+        && firestore.exists(/databases/(default)/documents/usuariosIndex/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/usuariosIndex/$(request.auth.uid)).data.oficinaId == oficinaId;
+    }
+
+    match /oficinas/{oficinaId}/{allPaths=**} {
+      allow read: if daOficina(oficinaId);
+
+      // As fotos já sobem comprimidas (1280px, qualidade 0.7) — 5 MB é folga
+      // suficiente e trava upload de arquivo cru vindo de outro caminho.
+      allow write: if daOficina(oficinaId)
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+
+      allow delete: if daOficina(oficinaId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
