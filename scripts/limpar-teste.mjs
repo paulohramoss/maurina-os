@@ -67,6 +67,13 @@ for (const [colecao, campo, valor] of [
   }
 }
 
+/** Links de aprovação criados pelos testes (token começa com "teste"/"vencido"). */
+const links = await db.collection('aprovacoes').where('osNumero', '==', '2026-TESTE').get()
+for (const link of links.docs) {
+  await link.ref.delete()
+  removidos++
+}
+
 // Contador de volta a zero: a próxima OS real será a 0001 do ano.
 await db.doc(`${base}/config/geral`).set(
   { contadorOS: 0, anoContador: new Date().getFullYear() },

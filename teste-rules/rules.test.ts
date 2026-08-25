@@ -6,7 +6,9 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection } from 'firebase/firestore'
+import {
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, collection, query,
+} from 'firebase/firestore'
 
 /**
  * Testes das Security Rules contra o emulador.
@@ -258,11 +260,166 @@ describe('timeline é imutável', () => {
 })
 
 describe('ninguém se promove a admin', () => {
-  it('usuariosIndex é somente leitura do próprio documento', async () => {
+  it('cada um lê só o próprio índice', async () => {
     await assertSucceeds(getDoc(doc(como('mecanico1'), 'usuariosIndex/mecanico1')))
     await assertFails(getDoc(doc(como('mecanico1'), 'usuariosIndex/admin1')))
+  })
+
+  it('mecânico não muda o próprio papel', async () => {
     await assertFails(
-      updateDoc(doc(como('mecanico1'), 'usuariosIndex/mecanico1'), { papel: 'admin' }),
+      setDoc(doc(como('mecanico1'), 'usuariosIndex/mecanico1'), {
+        oficinaId: OFICINA, papel: 'admin', ativo: true,
+      }),
     )
+  })
+
+  it('atendente não cadastra acesso nenhum', async () => {
+    await assertFails(
+      setDoc(doc(como('atendente1'), 'usuariosIndex/novato'), {
+        oficinaId: OFICINA, papel: 'atendente', ativo: true,
+      }),
+    )
+  })
+
+  it('admin cadastra acesso na própria oficina', async () => {
+    await assertSucceeds(
+      setDoc(doc(como('admin1'), 'usuariosIndex/novato'), {
+        oficinaId: OFICINA, papel: 'atendente', ativo: true,
+      }),
+    )
+  })
+
+  it('admin não cadastra acesso em outra oficina', async () => {
+    await assertFails(
+      setDoc(doc(como('admin1'), 'usuariosIndex/infiltrado'), {
+        oficinaId: OUTRA_OFICINA, papel: 'admin', ativo: true,
+      }),
+    )
+  })
+
+  it('admin não mexe no próprio acesso', async () => {
+    // Impede o admin de se rebaixar e deixar a oficina sem administrador.
+    await assertFails(
+      setDoc(doc(como('admin1'), 'usuariosIndex/admin1'), {
+        oficinaId: OFICINA, papel: 'atendente', ativo: true,
+      }),
+    )
+  })
+
+  it('admin não inventa papel novo', async () => {
+    await assertFails(
+      setDoc(doc(como('admin1'), 'usuariosIndex/novato'), {
+        oficinaId: OFICINA, papel: 'superusuario', ativo: true,
+      }),
+    )
+  })
+})
+
+describe('link público de aprovação', () => {
+  const daquiSeteDias = () => {
+    const d = new Date()
+    d.setDate(d.getDate() + 7)
+    return d
+  }
+
+  const orcamento = (extras: Record<string, unknown> = {}) => ({
+    oficinaId: OFICINA,
+    osId: 'os1',
+    osNumero: '2026-0001',
+    nomeOficina: 'Maurina',
+    nomeCliente: 'João',
+    veiculo: 'Fiat Uno 2019',
+    placa: 'ABC1D23',
+    reclamacao: 'Barulho na roda',
+    pecas: [], servicos: [],
+    subtotalPecas: 16000, subtotalServicos: 5000,
+    descontoValor: 0, acrescimo: 0, valorTotal: 21000,
+    fotos: [], garantiaMeses: 3,
+    criadoEm: new Date(),
+    expiraEm: daquiSeteDias(),
+    cancelado: false,
+    resposta: null, respondidoPor: null, respondidoEm: null,
+    ...extras,
+  })
+
+  const semear = async (token: string, extras: Record<string, unknown> = {}) => {
+    await ambiente.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `aprovacoes/${token}`), orcamento(extras))
+    })
+  }
+
+  it('balcão gera o link', async () => {
+    await assertSucceeds(setDoc(doc(como('atendente1'), 'aprovacoes/tk1'), orcamento()))
+  })
+
+  it('balcão não gera link para outra oficina', async () => {
+    await assertFails(
+      setDoc(doc(como('atendente1'), 'aprovacoes/tk2'), orcamento({ oficinaId: OUTRA_OFICINA })),
+    )
+  })
+
+  it('mecânico não gera link', async () => {
+    await assertFails(setDoc(doc(como('mecanico1'), 'aprovacoes/tk3'), orcamento()))
+  })
+
+  it('cliente sem login abre o próprio orçamento', async () => {
+    await semear('tk-ok')
+    await assertSucceeds(getDoc(doc(anonimo(), 'aprovacoes/tk-ok')))
+  })
+
+  it('cliente sem login não abre link vencido', async () => {
+    const ontem = new Date()
+    ontem.setDate(ontem.getDate() - 1)
+    await semear('tk-vencido', { expiraEm: ontem })
+    await assertFails(getDoc(doc(anonimo(), 'aprovacoes/tk-vencido')))
+  })
+
+  it('cliente sem login não abre link encerrado pelo balcão', async () => {
+    await semear('tk-cancelado', { cancelado: true })
+    await assertFails(getDoc(doc(anonimo(), 'aprovacoes/tk-cancelado')))
+  })
+
+  it('cliente sem login aprova', async () => {
+    await semear('tk-aprovar')
+    await assertSucceeds(
+      updateDoc(doc(anonimo(), 'aprovacoes/tk-aprovar'), {
+        resposta: 'aprovado', respondidoPor: 'João', respondidoEm: new Date(),
+      }),
+    )
+  })
+
+  it('cliente não aprova baixando o valor no caminho', async () => {
+    await semear('tk-esperto')
+    await assertFails(
+      updateDoc(doc(anonimo(), 'aprovacoes/tk-esperto'), {
+        resposta: 'aprovado', respondidoPor: 'João', respondidoEm: new Date(), valorTotal: 1,
+      }),
+    )
+  })
+
+  it('cliente não responde duas vezes', async () => {
+    await semear('tk-usado', {
+      resposta: 'aprovado', respondidoPor: 'João', respondidoEm: new Date(),
+    })
+    await assertFails(
+      updateDoc(doc(anonimo(), 'aprovacoes/tk-usado'), {
+        resposta: 'recusado', respondidoPor: 'João', respondidoEm: new Date(),
+      }),
+    )
+  })
+
+  it('cliente não estica a validade do link', async () => {
+    await semear('tk-prazo')
+    const ano2030 = new Date(2030, 0, 1)
+    await assertFails(updateDoc(doc(anonimo(), 'aprovacoes/tk-prazo'), { expiraEm: ano2030 }))
+  })
+
+  it('cliente não lista os links dos outros', async () => {
+    await assertFails(getDocs(query(collection(anonimo(), 'aprovacoes'))))
+  })
+
+  it('link não é apagado nem pelo admin: é comprovante', async () => {
+    await semear('tk-comprovante')
+    await assertFails(deleteDoc(doc(como('admin1'), 'aprovacoes/tk-comprovante')))
   })
 })

@@ -2,6 +2,7 @@ import { RouterProvider } from 'react-router-dom'
 import { router } from './routes'
 import { useObservadorSessao } from './hooks/useAuth'
 import { useObservadorConexao } from './hooks/useConexao'
+import { AvisoPWA } from './components/layout/AvisoPWA'
 
 export function App() {
   // Sessão e conexão são observadas uma vez, acima do router:
@@ -9,5 +10,10 @@ export function App() {
   useObservadorSessao()
   useObservadorConexao()
 
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <RouterProvider router={router} />
+      <AvisoPWA />
+    </>
+  )
 }

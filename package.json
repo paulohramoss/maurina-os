@@ -14,7 +14,8 @@
     "deploy": "npm run build && firebase deploy",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",
     "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.ts\"",
-    "test:producao": "node scripts/teste-producao.mjs"
+    "test:producao": "node scripts/teste-producao.mjs",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

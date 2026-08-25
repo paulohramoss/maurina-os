@@ -28,6 +28,7 @@ npm run dev
 | `npm run deploy` | Build + deploy de hosting, rules e índices |
 | `npm run deploy:rules` | Deploy só das regras e índices |
 | `npm run test:producao` | Testa as regras contra o projeto **real**, com login de verdade |
+| `npm run deploy:hosting` | Publica só o app, sem tocar em regras |
 
 > `npm run test:rules` e `npm run emu` usam o emulador do Firebase, que roda em JVM.
 > Em Ubuntu/Debian: `sudo apt install default-jre`.
@@ -100,13 +101,34 @@ Três regras que valem para o projeto inteiro:
 25 testes em `teste-rules/` rodam contra o emulador e verificam, entre outros,
 que o mecânico **não** altera valor de peça, desconto, pagamento nem exclui OS.
 
-E porque emulador não é produção, `scripts/teste-producao.mjs` repete a checagem
-contra o projeto real, fazendo login de verdade:
+E porque emulador não é produção, três scripts repetem a checagem contra o
+projeto real, com login de verdade:
 
 ```bash
+# Fase 1: cadastros, abertura de OS e bloqueios do mecânico
 node scripts/teste-producao.mjs balcao@… senha patio@… senha
-node scripts/limpar-teste.mjs      # remove o que o teste criou
+
+# Fases 2 e 3: orçamento, aprovação, recebimento, catálogo e acessos
+node scripts/teste-producao-operacao.mjs admin@… senha patio@… senha
+
+# Fase 4: o link público — a única escrita anônima do sistema
+node scripts/teste-producao-aprovacao.mjs balcao@… senha
+
+node scripts/limpar-teste.mjs      # remove tudo o que os testes criaram
 ```
+
+### O link público de aprovação
+
+`/aprovar/{token}` é o único lugar onde alguém **sem login** escreve no banco.
+Por isso ele foi desenhado como uma porta estreita:
+
+- vive em `/aprovacoes/{token}`, fora da árvore da oficina;
+- carrega uma **cópia** do orçamento, não uma referência — dar ao cliente
+  permissão de ler a OS abriria a coleção inteira para quem não tem conta;
+- o token é um UUID sem hífens (32 caracteres) e vale 7 dias;
+- a única escrita permitida é a resposta, uma vez só, sem encostar em valor,
+  prazo ou identificação da OS;
+- nem o admin apaga o link: ele é o comprovante da autorização.
 
 `src/domain/permissoes.ts` espelha essas regras no cliente para esconder o que
 o usuário não pode usar. **Mudou lá, muda aqui** — a UI esconde, a rule bloqueia.

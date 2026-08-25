@@ -349,3 +349,62 @@ tela de configuração da oficina.
 - **Mecânico não vê valor nem no banco**: as Rules recusam qualquer update dele que
   mexa em `valorTotal`, `subtotais`, `desconto`, `pagamento`, ou que mude o tamanho
   das listas de peças e serviços.
+
+---
+
+## 14. Fases 2, 3 e 4 — entregues em 25/08/2026
+
+### Fase 2 — Orçamento e fechamento
+
+- Lançamento de peças e serviços; total de linha sempre calculado, nunca digitado
+- Desconto em reais ou percentual (basis points) sobre o subtotal geral, e acréscimo
+- `CampoMoeda` com digitação contínua — centavos inteiros de ponta a ponta
+- Aprovação com assinatura em canvas, canal e horário
+- Fotos de entrada e de execução, comprimidas no aparelho (1280px, q=0.7)
+- Via impressa A4 em duas vias, com termos, checklist e assinaturas
+- Ficha do veículo: histórico completo e lista de peças já aplicadas
+
+### Fase 3 — Operação diária
+
+- Dashboard: faturamento do mês, ticket médio, entregue hoje, a receber
+- Alertas de revisão vencida (por KM **ou** por data), com atalho de WhatsApp
+- Catálogo de peças e serviços alimentando o autocomplete do orçamento
+- Financeiro em três painéis: caixa do dia, contas a receber, fechamento por período
+- Exportação CSV compatível com Excel pt-BR (`;` + decimal com vírgula + BOM)
+- Configuração da oficina, termos da OS e gestão de acessos
+
+### Fase 4 — Polimento
+
+- Link público `/aprovar/{token}`: cliente aprova pelo celular, sem login
+- Aviso de nova versão do PWA — nunca atualiza sozinho no meio de uma OS
+- Botão de WhatsApp com resumo e link em todas as telas relevantes
+- Relatórios por período e exportação CSV no financeiro e nas revisões
+
+### Decisões técnicas do caminho
+
+| Decisão | Por quê |
+|---|---|
+| **Banco nomeado `default`** | Foi assim que o Firestore criou; nomeado explicitamente em `firebase.ts`, nos scripts e no `firebase.json` |
+| **Impressão via `window.print()`** | Rota dedicada com CSS `@page A4`. Mais fiel ao papel que rasterizar tela com html2canvas, e zero biblioteca no download |
+| **Usuário criado por app Firebase secundário** | `createUserWithEmailAndPassword` trocaria a sessão do admin. O app secundário é descartado logo depois. Evita Cloud Function (plano pago) |
+| **Rules de `usuariosIndex` afrouxadas com trava tripla** | Admin cadastra a equipe pelo app, mas só na própria oficina, nunca o próprio acesso, e só com papel conhecido |
+| **Link de aprovação carrega cópia do orçamento** | Dar ao cliente permissão de ler a OS abriria a coleção inteira para anônimos |
+| **`fotosExecucao` separado de `checklistEntrada.fotos`** | Foto de avaria na entrada e foto do serviço pronto servem a discussões diferentes |
+
+### Verificação
+
+| Suíte | Resultado |
+|---|---|
+| Unidade (`npm test`) | **56 passando** |
+| Rules no emulador (`npm run test:rules`) | **43 passando** |
+| Produção — Fase 1 | **23/23** |
+| Produção — Fases 2 e 3 | **24/24** |
+| Produção — link público | **21/21** |
+
+### Ainda pendente
+
+- **Firebase Storage não inicializado.** As telas de foto estão prontas e avisam
+  na tela quando o upload falha por isso. Console → Storage → Começar, depois
+  `npm run deploy:rules`.
+- Cronometrar a abertura de OS no celular (alvo: < 90 s).
+- Logo e cores oficiais da Maurina — tudo centralizado em `src/theme.ts`.

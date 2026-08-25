@@ -15,9 +15,15 @@ import { TelaCatalogo } from '@/features/catalogo/TelaCatalogo'
 import { TelaFinanceiro } from '@/features/financeiro/TelaFinanceiro'
 import { TelaRevisoes } from '@/features/veiculos/TelaRevisoes'
 import { TelaConfig } from '@/features/config/TelaConfig'
+import { TelaAprovacao } from '@/features/publico/TelaAprovacao'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <TelaLogin /> },
+  {
+    // Pública de verdade: o cliente abre pelo WhatsApp, sem conta e sem app.
+    path: '/aprovar/:token',
+    element: <TelaAprovacao />,
+  },
   {
     // Fora do AppShell de propósito: a via impressa não leva menu nem barra.
     path: '/os/:id/imprimir',

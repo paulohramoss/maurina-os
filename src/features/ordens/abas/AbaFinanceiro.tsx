@@ -4,6 +4,7 @@ import { Entrada, Selecao } from '@/components/ui/Campo'
 import { CampoMoeda } from '@/components/ui/CampoMoeda'
 import { Modal } from '@/components/ui/Modal'
 import { Assinatura } from '@/components/os/Assinatura'
+import { PainelLinkAprovacao } from '@/components/os/PainelLinkAprovacao'
 import { formatarMoeda } from '@/utils/dinheiro'
 import { formatarDataHora } from '@/utils/data'
 import { OPCOES_FORMA, rotuloForma, useAcoesPagamento, usePagamentos } from '@/hooks/usePagamentos'
@@ -28,6 +29,7 @@ export function AbaFinanceiro({ os }: { os: OrdemServico }) {
   return (
     <div className="flex flex-col gap-5">
       <BlocoAprovacao os={os} podeEditar={podeLancar} />
+      {podeLancar && !os.aprovacao && <PainelLinkAprovacao os={os} />}
       <BlocoPagamento os={os} podeEditar={podeLancar} />
     </div>
   )

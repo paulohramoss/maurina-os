@@ -81,12 +81,46 @@ service cloud.firestore {
     /* ---------------- tokens públicos de aprovação (Fase 4) ---------------- */
 
     match /aprovacoes/{token} {
-      // Cliente abre pelo link do WhatsApp, sem login. Só lê enquanto o token vale.
+      // O cliente abre pelo link do WhatsApp, sem login nenhum.
+      // Só enxerga enquanto o token vale, e nunca a lista inteira de tokens.
       allow get: if resource.data.expiraEm > request.time
-                 && resource.data.usado == false;
+                 && resource.data.cancelado == false;
       allow list: if false;
-      // A aprovação em si é gravada por Cloud Function, que registra IP e timestamp.
-      allow write: if false;
+
+      // Quem cria o link é o balcão, autenticado.
+      allow create: if autenticado()
+                    && exists(/databases/$(database)/documents/usuariosIndex/$(request.auth.uid))
+                    && indice().oficinaId == request.resource.data.oficinaId
+                    && indice().papel in ['admin', 'atendente']
+                    && request.resource.data.respondidoEm == null;
+
+      // O cliente responde SEM estar logado. A única escrita que ele consegue
+      // fazer no sistema inteiro é esta, e ela é uma via de mão única:
+      //   - só num token que ainda vale e ainda não foi respondido;
+      //   - só pode preencher resposta/quem respondeu/quando;
+      //   - não encosta em valor, em OS, nem no prazo do próprio token.
+      function respostaDoCliente() {
+        return resource.data.expiraEm > request.time
+          && resource.data.cancelado == false
+          && resource.data.respondidoEm == null
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['resposta', 'respondidoPor', 'respondidoEm', 'observacaoCliente'])
+          && request.resource.data.resposta in ['aprovado', 'recusado']
+          && request.resource.data.osId == resource.data.osId
+          && request.resource.data.oficinaId == resource.data.oficinaId
+          && request.resource.data.valorTotal == resource.data.valorTotal;
+      }
+
+      // O balcão cancela o link (orçamento mudou, cliente aprovou no balcão).
+      function cancelamentoDoBalcao() {
+        return autenticado()
+          && exists(/databases/$(database)/documents/usuariosIndex/$(request.auth.uid))
+          && indice().oficinaId == resource.data.oficinaId
+          && indice().papel in ['admin', 'atendente'];
+      }
+
+      allow update: if respostaDoCliente() || cancelamentoDoBalcao();
+      allow delete: if false;
     }
 
     /* ---------------- oficina ---------------- */

@@ -287,6 +287,9 @@ export interface OrdemServico extends Auditoria {
   acrescimo?: Centavos
   valorTotal: Centavos
 
+  /** Token do link público de aprovação em aberto. Vazio = nenhum link ativo. */
+  tokenAprovacao?: string
+
   aprovacao?: Aprovacao
   pagamento?: PagamentoOS
 
