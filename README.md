@@ -4,7 +4,38 @@ Sistema de ordem de serviço para oficina mecânica multimarcas.
 PWA mobile-first: o atendente abre a OS no balcão, o mecânico trabalha no
 celular do pátio, e tudo continua funcionando quando a internet cai.
 
+**React 18 · TypeScript · Vite · Tailwind · Firebase**
+
 Plano completo de arquitetura e fases: [PLAN.md](PLAN.md).
+
+---
+
+## O que ele faz
+
+- **Ordem de serviço completa** — entrada do veículo, checklist com fotos,
+  diagnóstico, orçamento, aprovação, execução, entrega e pagamento
+- **Busca por placa** — digitou, achou o carro e todo o histórico dele
+- **Três papéis com permissões reais** — o mecânico não vê preço nenhum,
+  e isso é garantido pelas Security Rules, não só escondido na tela
+- **Aprovação por WhatsApp** — link público, o cliente aprova pelo celular
+  sem instalar nada, e a resposta fica registrada com nome e horário
+- **Offline-first** — a OS abre e edita sem internet e sincroniza depois
+- **OS impressa em A4** — duas vias, termos de garantia e assinatura
+- **Financeiro** — caixa do dia, contas a receber e fechamento por período
+
+## Decisões de projeto
+
+Três regras que valem para o código inteiro:
+
+- **Dinheiro é sempre inteiro em centavos.** Nunca float. `0.1 + 0.2` não pode
+  virar uma discussão com o cliente no balcão.
+- **Nada é apagado.** Soft delete via `excluidoEm` em todas as coleções.
+- **Tudo vive dentro de uma oficina.** `oficinas/{oficinaId}/…` desde o dia 1,
+  mesmo com uma oficina só.
+
+E uma máquina de estados de verdade: a OS não muda de status por caminho que
+não exista. Entregar exige KM de saída, data e situação do pagamento; cancelar
+exige motivo; e toda transição deixa rastro na timeline com autor e horário.
 
 ---
 
