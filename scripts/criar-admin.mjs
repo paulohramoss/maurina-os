@@ -18,6 +18,7 @@ import { getAuth } from 'firebase-admin/auth'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 
 const OFICINA_ID = process.env.OFICINA_ID ?? 'maurina'
+const ID_BANCO = process.env.FIRESTORE_DATABASE_ID ?? 'default'
 const CAMINHO_CHAVE = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? './serviceAccount.json'
 
 const [email, senha, nome = 'Administrador'] = process.argv.slice(2)
@@ -44,7 +45,7 @@ const credencial = JSON.parse(readFileSync(CAMINHO_CHAVE, 'utf8'))
 initializeApp({ credential: cert(credencial) })
 
 const auth = getAuth()
-const db = getFirestore()
+const db = getFirestore(ID_BANCO)
 
 /** Se o e-mail já existe, reaproveita a conta em vez de estourar. */
 async function obterOuCriarUsuario() {

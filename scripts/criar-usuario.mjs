@@ -17,6 +17,7 @@ import { getAuth } from 'firebase-admin/auth'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 
 const OFICINA_ID = process.env.OFICINA_ID ?? 'maurina'
+const ID_BANCO = process.env.FIRESTORE_DATABASE_ID ?? 'default'
 const CAMINHO_CHAVE = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? './serviceAccount.json'
 const PAPEIS = ['admin', 'atendente', 'mecanico']
 
@@ -37,7 +38,7 @@ if (!existsSync(CAMINHO_CHAVE)) {
 initializeApp({ credential: cert(JSON.parse(readFileSync(CAMINHO_CHAVE, 'utf8'))) })
 
 const auth = getAuth()
-const db = getFirestore()
+const db = getFirestore(ID_BANCO)
 
 let uid
 try {

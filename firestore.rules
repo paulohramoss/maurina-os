@@ -51,11 +51,6 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
     }
 
-    // Soft delete: nada some do banco.
-    function naoApaga() {
-      return request.method != 'delete';
-    }
-
     /* ---------------- índice de usuários ---------------- */
 
     match /usuariosIndex/{uid} {

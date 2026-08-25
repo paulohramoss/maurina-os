@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/uiStore'
 import { pode, ROTULO_PAPEL } from '@/domain/permissoes'
 import { sair } from '@/hooks/useAuth'
 import { BadgeConexao } from './BadgeConexao'
+import { SeletorMecanico } from '@/components/os/SeletorMecanico'
 import {
   IconeCarro,
   IconeClientes,
@@ -36,6 +37,9 @@ export function AppShell() {
   const papel = useAuthStore((e) => e.papel)
   const tema = useUIStore((e) => e.tema)
   const alternarTema = useUIStore((e) => e.alternarTema)
+  const mecanicoAtivoId = useUIStore((e) => e.mecanicoAtivoId)
+  const mecanicoAtivoNome = useUIStore((e) => e.mecanicoAtivoNome)
+  const definirMecanicoAtivo = useUIStore((e) => e.definirMecanicoAtivo)
   const [menuAberto, setMenuAberto] = useState(false)
   const navegar = useNavigate()
 
@@ -50,6 +54,12 @@ export function AppShell() {
   const aoSair = async () => {
     await sair()
     navegar('/login', { replace: true })
+  }
+
+  // O aparelho do pátio é compartilhado: ninguém mexe em OS sem dizer quem é,
+  // senão o histórico perde a autoria — que é justamente para que ele serve.
+  if (papel === 'mecanico' && !mecanicoAtivoId) {
+    return <SeletorMecanico />
   }
 
   return (
@@ -92,8 +102,22 @@ export function AppShell() {
           )}
         </nav>
 
-        <div className="border-t border-grafite-800 p-3">
-          <PainelUsuario nome={usuario?.nome} papel={papel} aoSair={aoSair} />
+        <div className="flex flex-col gap-2 border-t border-grafite-800 p-3">
+          {podeAbrirOS && (
+            <NavLink
+              to="/equipe"
+              className="flex min-h-toque items-center gap-3 rounded-lg px-3 text-sm text-grafite-300 hover:bg-grafite-800"
+            >
+              <IconeClientes className="h-5 w-5" />
+              Equipe do pátio
+            </NavLink>
+          )}
+          <PainelUsuario
+            nome={mecanicoAtivoNome ?? usuario?.nome}
+            papel={papel}
+            aoSair={aoSair}
+            aoTrocarMecanico={mecanicoAtivoId ? () => definirMecanicoAtivo(null) : undefined}
+          />
         </div>
       </aside>
 
@@ -127,8 +151,23 @@ export function AppShell() {
         </header>
 
         {menuAberto && (
-          <div className="border-b border-grafite-800 bg-grafite-900 p-3 md:hidden">
-            <PainelUsuario nome={usuario?.nome} papel={papel} aoSair={aoSair} />
+          <div className="flex flex-col gap-2 border-b border-grafite-800 bg-grafite-900 p-3 md:hidden">
+            {podeAbrirOS && (
+              <NavLink
+                to="/equipe"
+                onClick={() => setMenuAberto(false)}
+                className="flex min-h-toque items-center gap-3 rounded-lg px-3 text-sm text-grafite-300 hover:bg-grafite-800"
+              >
+                <IconeClientes className="h-5 w-5" />
+                Equipe do pátio
+              </NavLink>
+            )}
+            <PainelUsuario
+              nome={mecanicoAtivoNome ?? usuario?.nome}
+              papel={papel}
+              aoSair={aoSair}
+              aoTrocarMecanico={mecanicoAtivoId ? () => definirMecanicoAtivo(null) : undefined}
+            />
           </div>
         )}
 
@@ -196,16 +235,29 @@ function PainelUsuario({
   nome,
   papel,
   aoSair,
+  aoTrocarMecanico,
 }: {
   nome: string | undefined
   papel: ReturnType<typeof useAuthStore.getState>['papel']
   aoSair: () => void
+  /** Só existe no aparelho do pátio, onde o login é compartilhado. */
+  aoTrocarMecanico?: () => void
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-grafite-100">{nome ?? '—'}</p>
-        <p className="truncate text-xs texto-fraco">{papel ? ROTULO_PAPEL[papel] : ''}</p>
+        {aoTrocarMecanico ? (
+          <button
+            type="button"
+            onClick={aoTrocarMecanico}
+            className="text-xs text-acento-400 hover:underline"
+          >
+            trocar mecânico
+          </button>
+        ) : (
+          <p className="truncate text-xs texto-fraco">{papel ? ROTULO_PAPEL[papel] : ''}</p>
+        )}
       </div>
       <button
         type="button"

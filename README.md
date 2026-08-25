@@ -27,9 +27,17 @@ npm run dev
 | `npm run emu` | Sobe o Emulator Suite (Auth, Firestore, Storage) |
 | `npm run deploy` | Build + deploy de hosting, rules e índices |
 | `npm run deploy:rules` | Deploy só das regras e índices |
+| `npm run test:producao` | Testa as regras contra o projeto **real**, com login de verdade |
 
 > `npm run test:rules` e `npm run emu` usam o emulador do Firebase, que roda em JVM.
 > Em Ubuntu/Debian: `sudo apt install default-jre`.
+
+### O banco se chama `default`
+
+Este projeto usa um banco Firestore **nomeado** (`default`), e não o `(default)`
+implícito. Por isso ele é passado explicitamente em `src/lib/firebase.ts`
+(via `VITE_FIREBASE_DATABASE_ID`), nos scripts do Admin SDK e no `firebase.json`.
+Sem isso o SDK procura um banco que não existe e devolve `NOT_FOUND`.
 
 ---
 
@@ -91,6 +99,14 @@ Três regras que valem para o projeto inteiro:
 `firestore.rules` e `storage.rules` são escritas de verdade e testadas:
 25 testes em `teste-rules/` rodam contra o emulador e verificam, entre outros,
 que o mecânico **não** altera valor de peça, desconto, pagamento nem exclui OS.
+
+E porque emulador não é produção, `scripts/teste-producao.mjs` repete a checagem
+contra o projeto real, fazendo login de verdade:
+
+```bash
+node scripts/teste-producao.mjs balcao@… senha patio@… senha
+node scripts/limpar-teste.mjs      # remove o que o teste criou
+```
 
 `src/domain/permissoes.ts` espelha essas regras no cliente para esconder o que
 o usuário não pode usar. **Mudou lá, muda aqui** — a UI esconde, a rule bloqueia.

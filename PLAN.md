@@ -317,11 +317,22 @@ tela de configuração da oficina.
 - [x] Build sem erro de TypeScript, sem `any`, sem warning
 - [ ] Abrir OS completa em menos de 90 segundos no celular — *depende de teste com o app publicado*
 
-### Pendente da Fase 1 (destravado pelas credenciais)
+### Publicado — 24/08/2026
 
-- Deploy no Firebase Hosting (`npm run deploy`)
-- Criação do admin e dos usuários de teste no projeto real
-- Cronometrar a abertura de OS no celular
+- **App no ar:** https://maurina-73a7d.web.app
+- Projeto `maurina-73a7d`, Firestore em `southamerica-east1` (São Paulo), edição Standard
+- Rules e índices deployados; Auth com e-mail/senha ativo
+- Três usuários criados (admin, atendente, mecânico)
+- **23/23 testes de fumaça passando contra o projeto real**, incluindo 9 bloqueios
+  de segurança verificados com login de verdade
+- Equipe do pátio (`/equipe`) e seletor "quem está no aparelho" implementados —
+  o que faltava para a decisão do login compartilhado fazer sentido
+
+### Pendente
+
+- **Firebase Storage não inicializado** — bloqueia as fotos do checklist (Fase 2).
+  Console → Storage → Começar, e depois `npm run deploy:rules`.
+- Cronometrar a abertura de OS no celular (< 90 s)
 
 ### Decisões técnicas registradas no caminho
 

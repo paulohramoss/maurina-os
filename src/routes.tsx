@@ -8,6 +8,7 @@ import { TelaNovaOS } from '@/features/ordens/TelaNovaOS'
 import { TelaDetalheOS } from '@/features/ordens/TelaDetalheOS'
 import { TelaClientes } from '@/features/clientes/TelaClientes'
 import { TelaFichaCliente } from '@/features/clientes/TelaFichaCliente'
+import { TelaEquipe } from '@/features/equipe/TelaEquipe'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <TelaLogin /> },
@@ -43,6 +44,14 @@ export const router = createBrowserRouter([
         element: (
           <RotaProtegida exige="cliente:criar">
             <TelaFichaCliente />
+          </RotaProtegida>
+        ),
+      },
+      {
+        path: 'equipe',
+        element: (
+          <RotaProtegida exige="cliente:criar">
+            <TelaEquipe />
           </RotaProtegida>
         ),
       },

@@ -27,6 +27,13 @@ const config = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
+/**
+ * O banco deste projeto foi criado com o nome "default" (e não com o
+ * "(default)" implícito), então precisa ser nomeado explicitamente —
+ * sem isso o SDK procura um banco que não existe e devolve NOT_FOUND.
+ */
+const ID_BANCO = import.meta.env.VITE_FIREBASE_DATABASE_ID || 'default'
+
 export const configuracaoCompleta = Object.values(config).every(
   (valor) => typeof valor === 'string' && valor.length > 0,
 )
@@ -40,9 +47,11 @@ if (!configuracaoCompleta) {
 
 export const app: FirebaseApp = initializeApp(config)
 
-export const db: Firestore = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-})
+export const db: Firestore = initializeFirestore(
+  app,
+  { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) },
+  ID_BANCO,
+)
 
 export const auth: Auth = getAuth(app)
 export const storage: FirebaseStorage = getStorage(app)
