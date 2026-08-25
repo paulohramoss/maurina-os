@@ -290,3 +290,51 @@ tela de configuração da oficina.
 - `historico.autorNome` guarda o nome do mecânico escolhido; `autorId` guarda o uid (compartilhado).
 - Seleção do mecânico fica em `sessionStorage` (preferência de UI, não dado de negócio) para não
   perguntar a cada toque — com botão "trocar mecânico" sempre visível no header.
+
+---
+
+## 13. Estado da Fase 1
+
+### Entregue
+
+| Área | O que existe |
+|---|---|
+| Fundação | Vite + React 18 + TS strict, Tailwind com tema em `theme.ts`, PWA configurado, ícones |
+| Domínio | Máquina de estados, cálculo de totais, permissões, numeração — puros e testados (49 testes) |
+| Utils | Placa (2 formatos), dinheiro em centavos, CPF/CNPJ, telefone/WhatsApp, datas pt-BR, compressão de imagem |
+| Firebase | Conexão com persistência offline (IndexedDB, multi-aba), caminhos multi-tenant centralizados |
+| Segurança | `firestore.rules` + `storage.rules` + índices, **25 testes rodando contra o emulador** |
+| Auth | Login, sessão via `/usuariosIndex`, 3 papéis, rota protegida por permissão |
+| Telas | Login · Dashboard (busca por placa + pátio) · Lista de OS com filtros na URL · Wizard de abertura · Detalhe com abas e timeline · Clientes · Ficha do cliente |
+| Scripts | `criar-admin.mjs` e `criar-usuario.mjs` (Admin SDK) |
+
+### Critérios de aceite
+
+- [x] Login com 3 papéis e permissões distintas
+- [x] Busca por placa achando o veículo em 1 tela
+- [x] Status só transiciona por caminhos válidos, com registro no histórico
+- [x] Rules bloqueiam mecânico de editar valores — **testado no emulador**
+- [x] Build sem erro de TypeScript, sem `any`, sem warning
+- [ ] Abrir OS completa em menos de 90 segundos no celular — *depende de teste com o app publicado*
+
+### Pendente da Fase 1 (destravado pelas credenciais)
+
+- Deploy no Firebase Hosting (`npm run deploy`)
+- Criação do admin e dos usuários de teste no projeto real
+- Cronometrar a abertura de OS no celular
+
+### Decisões técnicas registradas no caminho
+
+- **Tailwind v3 + `tailwind.config.ts` importando `src/theme.ts`**: mantém a identidade
+  visual em fonte única, como pedido. Com Tailwind v4 os tokens viveriam no CSS e
+  haveria duas fontes de verdade.
+- **`persistentLocalCache` em vez de `enableIndexedDbPersistence`**: mesma
+  funcionalidade offline, API atual do SDK v12; o multi-tab manager evita
+  briga de lock entre abas.
+- **`firebase` atualizado para v12**: exigência do `@firebase/rules-unit-testing` 5.
+- **Chunks separados** (firestore / firebase / react / formulário): a internet da
+  oficina é ruim, e o Firestore sozinho é 160 kB gzip que não precisam voltar a
+  cada deploy de correção de tela.
+- **Mecânico não vê valor nem no banco**: as Rules recusam qualquer update dele que
+  mexa em `valorTotal`, `subtotais`, `desconto`, `pagamento`, ou que mude o tamanho
+  das listas de peças e serviços.

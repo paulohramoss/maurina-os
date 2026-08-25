@@ -22,7 +22,7 @@ export default defineConfig({
         icons: [
           { src: '/icone-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icone-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icone-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icone-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -45,7 +45,10 @@ export default defineConfig({
         // navegador reaproveitar o cache do Firebase entre um deploy e outro,
         // em vez de rebaixar tudo a cada correção de tela.
         manualChunks: {
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          // Firestore é o maior pedaço e o único que muda de versão com
+          // frequência; separá-lo do resto poupa download nos deploys.
+          firestore: ['firebase/firestore'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/storage'],
           react: ['react', 'react-dom', 'react-router-dom'],
           formulario: ['react-hook-form', '@hookform/resolvers/zod', 'zod'],
         },
@@ -56,5 +59,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/teste/setup.ts'],
+    // teste-rules/ fala com o emulador e tem config própria (vitest.rules.config.ts).
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 })
