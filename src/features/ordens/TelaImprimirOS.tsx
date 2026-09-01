@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useOrdem } from '@/hooks/useOrdemServico'
+import { useCliente } from '@/hooks/useClientes'
 import { useConfigOficina, TERMOS_PADRAO } from '@/hooks/useConfigOficina'
 import { Carregando, Vazio } from '@/components/ui/Carregando'
 import { Botao } from '@/components/ui/Botao'
@@ -8,11 +9,12 @@ import { formatarMoeda } from '@/utils/dinheiro'
 import { formatarPlaca } from '@/utils/placa'
 import { formatarTelefone } from '@/utils/telefone'
 import { formatarDocumento } from '@/utils/documento'
+import { formatarEndereco, mascaraCep } from '@/utils/endereco'
 import { formatarData, formatarDataHora } from '@/utils/data'
 import { calcularTotais } from '@/domain/calculoOS'
 import { rotuloStatus } from '@/domain/statusOS'
 import { marca } from '@/theme'
-import type { ChecklistItens, ConfigOficina, OrdemServico } from '@/types'
+import type { ChecklistItens, Cliente, ConfigOficina, OrdemServico, SnapshotCliente } from '@/types'
 
 /**
  * A OS em papel.
@@ -27,6 +29,7 @@ import type { ChecklistItens, ConfigOficina, OrdemServico } from '@/types'
 export function TelaImprimirOS() {
   const { id } = useParams<{ id: string }>()
   const { os, carregando } = useOrdem(id)
+  const { cliente } = useCliente(os?.clienteId)
   const { config } = useConfigOficina()
 
   // Título da janela vira o nome sugerido do arquivo ao salvar em PDF.
@@ -54,14 +57,33 @@ export function TelaImprimirOS() {
       </div>
 
       <div className="mx-auto max-w-[210mm] bg-white px-4 py-6 text-black print:p-0">
-        <Via os={os} config={config} via="CLIENTE" />
+        <Via os={os} cliente={cliente} config={config} via="CLIENTE" />
         <div className="my-6 border-t-2 border-dashed border-gray-400 print:my-4">
           <p className="pt-1 text-center text-[8pt] text-gray-500">recorte aqui</p>
         </div>
-        <Via os={os} config={config} via="OFICINA" />
+        <Via os={os} cliente={cliente} config={config} via="OFICINA" />
       </div>
     </div>
   )
+}
+
+/**
+ * O que sai no bloco do cliente.
+ *
+ * A OS carrega um snapshot do cadastro do dia da abertura — é ele que manda.
+ * Mas OS aberta antes de o cadastro ter documento e endereço tem o snapshot
+ * incompleto, e o balcão completa a ficha justamente para imprimir. Então o
+ * que falta no snapshot vem do cadastro atual; o que já está congelado, fica.
+ */
+function dadosDoCliente(
+  snapshot: SnapshotCliente,
+  cliente: Cliente | null,
+): SnapshotCliente {
+  return {
+    ...snapshot,
+    cpfCnpj: snapshot.cpfCnpj ?? cliente?.cpfCnpj,
+    endereco: snapshot.endereco ?? cliente?.endereco,
+  }
 }
 
 const ROTULO_ITEM: Record<keyof ChecklistItens, string> = {
@@ -77,9 +99,21 @@ const ROTULO_ITEM: Record<keyof ChecklistItens, string> = {
 
 const NIVEIS = ['Vazio', '1/4', '1/2', '3/4', 'Cheio']
 
-function Via({ os, config, via }: { os: OrdemServico; config: ConfigOficina; via: 'CLIENTE' | 'OFICINA' }) {
+function Via({
+  os,
+  cliente,
+  config,
+  via,
+}: {
+  os: OrdemServico
+  cliente: Cliente | null
+  config: ConfigOficina
+  via: 'CLIENTE' | 'OFICINA'
+}) {
   const totais = calcularTotais(os.pecas, os.servicos, os.desconto, os.acrescimo ?? 0)
   const ehViaOficina = via === 'OFICINA'
+  const dadosCliente = dadosDoCliente(os.snapshotCliente, cliente)
+  const enderecoCliente = formatarEndereco(dadosCliente.endereco)
 
   return (
     <article className="break-inside-avoid text-[9pt] leading-snug text-black">
@@ -116,10 +150,14 @@ function Via({ os, config, via }: { os: OrdemServico; config: ConfigOficina; via
       {/* Cliente e veículo */}
       <section className="mt-2 grid grid-cols-2 gap-3">
         <Bloco titulo="Cliente">
-          <Campo rotulo="Nome" valor={os.snapshotCliente.nome} />
-          <Campo rotulo="Telefone" valor={formatarTelefone(os.snapshotCliente.telefone)} />
-          {os.snapshotCliente.cpfCnpj && (
-            <Campo rotulo="CPF/CNPJ" valor={formatarDocumento(os.snapshotCliente.cpfCnpj)} />
+          <Campo rotulo="Nome" valor={dadosCliente.nome} />
+          <Campo rotulo="Telefone" valor={formatarTelefone(dadosCliente.telefone)} />
+          {dadosCliente.cpfCnpj && (
+            <Campo rotulo="CPF/CNPJ" valor={formatarDocumento(dadosCliente.cpfCnpj)} />
+          )}
+          {enderecoCliente && <Campo rotulo="Endereço" valor={enderecoCliente} />}
+          {dadosCliente.endereco?.cep && (
+            <Campo rotulo="CEP" valor={mascaraCep(dadosCliente.endereco.cep)} />
           )}
         </Bloco>
 

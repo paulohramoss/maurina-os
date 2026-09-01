@@ -239,6 +239,8 @@ export interface SnapshotCliente {
   nome: string
   telefone: string
   cpfCnpj?: string
+  /** Endereço como estava na abertura. OS antiga não tem: a via impressa cai no cadastro atual. */
+  endereco?: Endereco
 }
 
 export interface SnapshotVeiculo {

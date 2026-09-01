@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useCliente } from '@/hooks/useClientes'
 import { useVeiculosDoCliente } from '@/hooks/useVeiculos'
@@ -8,6 +9,9 @@ import { IconeVoltar } from '@/components/layout/Icones'
 import { formatarPlaca } from '@/utils/placa'
 import { formatarTelefone, linkWhatsApp } from '@/utils/telefone'
 import { formatarDocumento } from '@/utils/documento'
+import { formatarEndereco } from '@/utils/endereco'
+import { Botao } from '@/components/ui/Botao'
+import { FormularioCliente } from './FormularioCliente'
 
 /** Ficha do cliente: dados, carros e tudo que já passou pela oficina. */
 export function TelaFichaCliente() {
@@ -15,6 +19,7 @@ export function TelaFichaCliente() {
   const { cliente, carregando } = useCliente(id)
   const { veiculos } = useVeiculosDoCliente(id)
   const { ordens } = useOrdens({ clienteId: id, quantidade: 30 })
+  const [editando, setEditando] = useState(false)
 
   if (carregando) return <Carregando />
   if (!cliente) return <Vazio titulo="Cliente não encontrado" />
@@ -32,14 +37,19 @@ export function TelaFichaCliente() {
           {formatarTelefone(cliente.telefone)}
           {cliente.cpfCnpj && ` · ${formatarDocumento(cliente.cpfCnpj)}`}
         </p>
-        <a
-          href={linkWhatsApp(cliente.whatsapp || cliente.telefone)}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-flex min-h-toque items-center rounded-lg border border-sucesso/50 px-4 text-sm text-sucesso hover:bg-sucesso/10"
-        >
-          Falar no WhatsApp
-        </a>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a
+            href={linkWhatsApp(cliente.whatsapp || cliente.telefone)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-toque items-center rounded-lg border border-sucesso/50 px-4 text-sm text-sucesso hover:bg-sucesso/10"
+          >
+            Falar no WhatsApp
+          </a>
+          <Botao variante="secundario" onClick={() => setEditando(true)}>
+            {cliente.cpfCnpj ? 'Editar dados' : 'Completar cadastro'}
+          </Botao>
+        </div>
       </header>
 
       {!cliente.cpfCnpj && (
@@ -47,6 +57,30 @@ export function TelaFichaCliente() {
           Cadastro incompleto: sem CPF/CNPJ. Complete antes de imprimir a OS com termos de garantia.
         </p>
       )}
+
+      {(cliente.email || cliente.endereco) && (
+        <section className="superficie flex flex-col gap-1 rounded-xl p-4">
+          <h2 className="mb-1 font-titulo text-lg uppercase text-grafite-200">Cadastro</h2>
+          {cliente.email && (
+            <p className="text-sm text-grafite-200">
+              <span className="texto-fraco">E-mail: </span>
+              {cliente.email}
+            </p>
+          )}
+          {cliente.endereco && formatarEndereco(cliente.endereco) && (
+            <p className="text-sm text-grafite-200">
+              <span className="texto-fraco">Endereço: </span>
+              {formatarEndereco(cliente.endereco)}
+            </p>
+          )}
+        </section>
+      )}
+
+      <FormularioCliente
+        cliente={cliente}
+        aberto={editando}
+        aoFechar={() => setEditando(false)}
+      />
 
       <section className="flex flex-col gap-2">
         <h2 className="font-titulo text-lg uppercase text-grafite-200">Veículos</h2>

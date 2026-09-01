@@ -7,7 +7,8 @@ import { Entrada, Selecao } from '@/components/ui/Campo'
 import { mascaraPlaca, placaValida, normalizarPlaca } from '@/utils/placa'
 import { mascaraTelefone, telefoneValido } from '@/utils/telefone'
 import { capitalizarNome } from '@/utils/texto'
-import { apenasDigitos } from '@/utils/documento'
+import { apenasDigitos, documentoValido, mascaraDocumento } from '@/utils/documento'
+import { cepValido, enderecoPreenchido, mascaraCep } from '@/utils/endereco'
 import { useAcoesCliente } from '@/hooks/useClientes'
 import { OPCOES_COMBUSTIVEL, useAcoesVeiculo, useVeiculosDoCliente } from '@/hooks/useVeiculos'
 import { mensagemErroFirestore } from '@/lib/firestoreHelpers'
@@ -17,7 +18,8 @@ import type { Cliente, Combustivel, Veiculo } from '@/types'
  * Cadastro rápido de cliente + veículo.
  *
  * Obrigatório é só nome e telefone do cliente, e placa/marca/modelo do carro.
- * Documento, endereço e e-mail entram depois — o carro está na porta,
+ * Documento e endereço ficam num bloco recolhido: quem tem o CPF na mão
+ * preenche na hora, quem não tem segue em frente — o carro está na porta,
  * a fila não pode parar por causa de um CPF que o cliente não lembra.
  */
 
@@ -26,6 +28,17 @@ const anoAtual = new Date().getFullYear()
 const esquema = z.object({
   nome: z.string().min(3, 'Informe o nome do cliente'),
   telefone: z.string().refine(telefoneValido, 'Telefone incompleto'),
+  cpfCnpj: z
+    .string()
+    .optional()
+    .refine((v) => !v?.trim() || documentoValido(v), 'CPF ou CNPJ inválido'),
+  cep: z.string().optional().refine((v) => cepValido(v ?? ''), 'CEP incompleto'),
+  rua: z.string().optional(),
+  numero: z.string().optional(),
+  complemento: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  uf: z.string().optional().refine((v) => !v?.trim() || v.trim().length === 2, 'Use a sigla, ex.: SP'),
   placa: z.string().refine(placaValida, 'Placa inválida'),
   marca: z.string().min(2, 'Informe a marca'),
   modelo: z.string().min(1, 'Informe o modelo'),
@@ -51,6 +64,7 @@ interface Props {
 
 export function PassoCadastro({ clienteExistente, placaInicial, aoConcluir, aoVoltar }: Props) {
   const [erro, setErro] = useState<string | null>(null)
+  const [mostrarComplementares, setMostrarComplementares] = useState(false)
   const { criar: criarCliente } = useAcoesCliente()
   const { criar: criarVeiculo, buscarPorId: buscarVeiculo } = useAcoesVeiculo()
   const { veiculos } = useVeiculosDoCliente(clienteExistente?.id)
@@ -78,22 +92,32 @@ export function PassoCadastro({ clienteExistente, placaInicial, aoConcluir, aoVo
       const cliente: Cliente =
         clienteExistente ??
         (await (async () => {
-          const id = await criarCliente({
+          const documento = dados.cpfCnpj?.trim() ? apenasDigitos(dados.cpfCnpj) : ''
+          const endereco = {
+            cep: apenasDigitos(dados.cep ?? ''),
+            rua: dados.rua?.trim() ?? '',
+            numero: dados.numero?.trim() ?? '',
+            complemento: dados.complemento?.trim() ?? '',
+            bairro: dados.bairro?.trim() ?? '',
+            cidade: dados.cidade?.trim() ?? '',
+            uf: (dados.uf ?? '').trim().toUpperCase(),
+          }
+
+          const novo = {
             nome: capitalizarNome(dados.nome),
-            tipo: 'PF',
+            // CNPJ com 14 dígitos é empresa — o tipo acompanha o documento.
+            tipo: (documento.length === 14 ? 'PJ' : 'PF') as Cliente['tipo'],
             telefone: apenasDigitos(dados.telefone),
             whatsapp: apenasDigitos(dados.telefone),
-          })
+            ...(documento ? { cpfCnpj: documento } : {}),
+            // Bloco em branco não vira endereço vazio no banco.
+            ...(enderecoPreenchido(endereco) ? { endereco } : {}),
+          }
+
+          const id = await criarCliente(novo)
           // Objeto local para o wizard seguir sem esperar o round-trip do Firestore
           // — importante quando a internet da oficina está ruim.
-          return {
-            id,
-            nome: capitalizarNome(dados.nome),
-            tipo: 'PF',
-            telefone: apenasDigitos(dados.telefone),
-            whatsapp: apenasDigitos(dados.telefone),
-            nomeBusca: '',
-          } as Cliente
+          return { id, ...novo, nomeBusca: '' } as Cliente
         })())
 
       const veiculoId = await criarVeiculo({
@@ -180,9 +204,101 @@ export function PassoCadastro({ clienteExistente, placaInicial, aoConcluir, aoVo
             onChange={(e) => setValue('telefone', mascaraTelefone(e.target.value))}
             value={watch('telefone')}
           />
-          <p className="-mt-2 text-sm texto-fraco">
-            CPF, e-mail e endereço podem ser preenchidos depois, na ficha do cliente.
-          </p>
+          <button
+            type="button"
+            onClick={() => setMostrarComplementares((v) => !v)}
+            className="-mt-1 flex min-h-toque items-center gap-2 self-start text-sm text-acento-400 hover:text-acento-300"
+            aria-expanded={mostrarComplementares}
+          >
+            <span aria-hidden="true">{mostrarComplementares ? '−' : '+'}</span>
+            CPF/CNPJ e endereço {mostrarComplementares ? '' : '(opcional)'}
+          </button>
+
+          {mostrarComplementares ? (
+            <div className="flex flex-col gap-4 border-l-2 border-grafite-800 pl-3">
+              <Entrada
+                id="cpfCnpj"
+                label="CPF / CNPJ"
+                inputMode="numeric"
+                className="font-mono"
+                placeholder="000.000.000-00"
+                dica="Opcional. Se preencher, o número é conferido."
+                erro={errors.cpfCnpj?.message}
+                {...register('cpfCnpj')}
+                onChange={(e) => setValue('cpfCnpj', mascaraDocumento(e.target.value))}
+                value={watch('cpfCnpj') ?? ''}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Entrada
+                  id="cep"
+                  label="CEP"
+                  inputMode="numeric"
+                  className="font-mono"
+                  placeholder="00000-000"
+                  erro={errors.cep?.message}
+                  {...register('cep')}
+                  onChange={(e) => setValue('cep', mascaraCep(e.target.value))}
+                  value={watch('cep') ?? ''}
+                />
+                <div className="sm:col-span-2">
+                  <Entrada
+                    id="rua"
+                    label="Rua"
+                    autoComplete="address-line1"
+                    placeholder="Rua das Flores"
+                    {...register('rua')}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Entrada
+                  id="numero"
+                  label="Número"
+                  inputMode="numeric"
+                  placeholder="120"
+                  {...register('numero')}
+                />
+                <div className="sm:col-span-2">
+                  <Entrada
+                    id="complemento"
+                    label="Complemento"
+                    placeholder="Fundos, apto 21…"
+                    {...register('complemento')}
+                  />
+                </div>
+              </div>
+
+              <Entrada id="bairro" label="Bairro" placeholder="Centro" {...register('bairro')} />
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="sm:col-span-2">
+                  <Entrada
+                    id="cidade"
+                    label="Cidade"
+                    autoComplete="address-level2"
+                    placeholder="Campinas"
+                    {...register('cidade')}
+                  />
+                </div>
+                <Entrada
+                  id="uf"
+                  label="UF"
+                  maxLength={2}
+                  autoCapitalize="characters"
+                  className="uppercase"
+                  placeholder="SP"
+                  erro={errors.uf?.message}
+                  {...register('uf')}
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="-mt-2 text-sm texto-fraco">
+              Nada disso é obrigatório — dá para completar depois, na ficha do cliente.
+            </p>
+          )}
         </section>
       )}
 

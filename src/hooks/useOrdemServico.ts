@@ -124,6 +124,7 @@ export function useAcoesOS() {
             nome: dados.cliente.nome,
             telefone: dados.cliente.telefone,
             ...(dados.cliente.cpfCnpj ? { cpfCnpj: dados.cliente.cpfCnpj } : {}),
+            ...(dados.cliente.endereco ? { endereco: dados.cliente.endereco } : {}),
           },
           snapshotVeiculo: {
             placa: dados.veiculo.placa,
